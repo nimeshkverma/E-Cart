@@ -14,7 +14,7 @@ class Cart(object):
         self.user_id = user_id
         self.redis_cart_init(user_id)
 
-    def redis_cart_init(self):
+    def redis_cart_init(self, user_id):
         if not RedisConnection.hexists(config.CART_CONFIG["hash_name"], self.user_id):
             RedisConnection.hset(
                 config.CART_CONFIG["hash_name"], self.user_id, {})

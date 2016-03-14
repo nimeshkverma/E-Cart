@@ -12,6 +12,6 @@ CART_CONFIG = {
 
 CART_PRODUCT_SAMPLE = {
     "product_id": 0,
-    "Product_price": 0
+    "Product_price": 0,
     "product_qty": 0
 }

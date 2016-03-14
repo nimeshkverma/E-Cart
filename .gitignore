@@ -1,2 +1,5 @@
 *.pyc
+.cache
+.ropeproject
+venv
 .DS_Stote
