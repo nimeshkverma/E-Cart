@@ -41,5 +41,16 @@ class Cart(object):
         self.redis_connection.hset(
             config.CART_CONFIG["hash_name"], self.user_id, Serializer.dumps(cart_dict))
 
+    def get(self, product_id):
+        cart_dict = self.__cart_dict()
+        return cart_dict.get(str(product_id))
+
     def remove(self, product_id):
-        pass
+        cart_dict = self.__cart_dict()
+        if product_id in cart_dict:
+            del cart_dict[product_id]
+            self.redis_connection.hset(
+                config.CART_CONFIG["hash_name"], self.user_id, Serializer.dumps(cart_dict))
+            return True
+        else:
+            return False
