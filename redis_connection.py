@@ -5,10 +5,10 @@ from config import REDIS
 
 
 @singleton
-class RedisConnection(object):
+class Redis(object):
 
     @raise_exception("Redis connection can't be established due to Error: ")
-    def get_redis_connections(self):
+    def get_connections(self):
         REDIS_SERVER = REDIS.get('SERVER')
         REDIS_PORT = REDIS.get('PORT')
         if REDIS_SERVER and REDIS_PORT:
