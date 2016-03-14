@@ -14,6 +14,7 @@ class Cart(object):
         self.user_id = user_id
         self.redis_connection = Redis().get_connections()
         self.redis_cart_init(user_id)
+        self.destroy = self.__del__
 
     def redis_cart_init(self, user_id):
         if not self.redis_connection.hexists(config.CART_CONFIG["hash_name"], self.user_id):
@@ -54,3 +55,7 @@ class Cart(object):
             return True
         else:
             return False
+
+    def __del__(self):
+        self.redis_connection.hdel(
+            config.CART_CONFIG["hash_name"], self.user_id)
