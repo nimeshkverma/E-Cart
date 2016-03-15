@@ -64,8 +64,14 @@ class Cart(object):
         else:
             return False
 
+    def __product_price(self, product):
+        return product['quantity'] * product['unit_cost']
+
+    def __price_list(self):
+        return map(lambda product: self.__product_price(product), self.get().values())
+
     def total_cost(self):
-        pass
+        return sum(self.__price_list())
 
     def __del__(self):
         self.redis_connection.hdel(
