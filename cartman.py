@@ -26,25 +26,33 @@ class Cart(object):
             config.CART_CONFIG["hash_name"], self.user_id)
         return Serializer.loads(cart_string)
 
-    def __product_dict(self, product_price, qty, extra_data_dict):
+    def __product_dict(self, unit_cost, quantity, extra_data_dict):
         product_dict = {
-            "product_price": product_price,
-            "qty": qty
+            "unit_cost": unit_cost,
+            "quantity": quantity
         }
         if extra_data_dict:
             product_dict.update(extra_data_dict)
         return product_dict
 
-    def add(self, product_id, product_price, qty=1, **extra_data_dict):
+    def add(self, product_id, unit_cost, quantity=1, **extra_data_dict):
         cart_dict = self.__cart_dict()
         cart_dict[product_id] = self.__product_dict(
-            product_price, qty, extra_data_dict)
+            unit_cost, quantity, extra_data_dict)
         self.redis_connection.hset(
             config.CART_CONFIG["hash_name"], self.user_id, Serializer.dumps(cart_dict))
 
-    def get(self, product_id):
+    def get_product(self, product_id):
         cart_dict = self.__cart_dict()
         return cart_dict.get(str(product_id))
+
+    def contains(self, product_id):
+        cart_dict = self.__cart_dict()
+        return True if cart_dict.get(str(product_id)) else False
+
+    def get(self):
+        cart_dict = self.__cart_dict()
+        return cart_dict
 
     def remove(self, product_id):
         cart_dict = self.__cart_dict()
@@ -55,6 +63,9 @@ class Cart(object):
             return True
         else:
             return False
+
+    def total_cost(self):
+        pass
 
     def __del__(self):
         self.redis_connection.hdel(
