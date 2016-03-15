@@ -54,6 +54,12 @@ class Cart(object):
         cart_dict = self.__cart_dict()
         return cart_dict
 
+    def __cart(self):
+        return self.get().values()
+
+    def find(self, id):
+        return self.get().get(str(id))
+
     def remove(self, product_id):
         cart_dict = self.__cart_dict()
         if product_id in cart_dict:
@@ -68,7 +74,7 @@ class Cart(object):
         return product['quantity'] * product['unit_cost']
 
     def __price_list(self):
-        return map(lambda product: self.__product_price(product), self.get().values())
+        return map(lambda product: self.__product_price(product), self.__cart())
 
     def total_cost(self):
         return sum(self.__price_list())
