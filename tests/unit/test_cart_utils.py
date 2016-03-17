@@ -33,3 +33,12 @@ def test_valid_product_price(cart):
 
 def test_invalid_product_price(cart):
     assert cart._Cart__product_price(cart.find(product_id)) != 21
+
+def test_count(cart):
+    assert cart.count() == 1
+
+def test_invalid_count(cart): 
+    assert cart.count() != 2
+
+def test_quantity(cart):
+    assert cart.quantity() == 2
