@@ -36,28 +36,6 @@ class Cart(object):
             Can also add extra details in the form of dictionary
         """
         cart_dict = self.__cart_dict()
-        final_qty = quantity
-        product_id = str(product_id)
-        if cart_dict.get(product_id):
-            if cart_dict.get(product_id).get("quantity", 0) + quantity > 0:
-                final_qty = cart_dict[product_id]["quantity"] + quantity
-            else:
-                raise ErrorMessage("The Final quantity can't be zero or less")
-        cart_dict[product_id] = self.__product_dict(
-            unit_cost, final_qty, extra_data_dict)
-        self.redis_connection.hset(
-            config.CART_CONFIG["hash_name"], self.user_id, Serializer.dumps(cart_dict))
-
-    def update(self, product_id, unit_cost=None, quantity=None, **extra_data_dict):
-        """
-        Updates a product_id with unit_cost and quantity
-        """
-        cart_dict = self.__cart_dict()
-        product_id = str(product_id)
-        unit_cost = unit_cost if unit_cost and unit_cost > 0 else cart_dict.get(
-            product_id, {}).get("unit_cost", 0)
-        quantity = quantity if quantity and quantity > 0 else cart_dict.get(
-            product_id, {}).get("quantity", 0)
         cart_dict[product_id] = self.__product_dict(
             unit_cost, quantity, extra_data_dict)
         self.redis_connection.hset(
