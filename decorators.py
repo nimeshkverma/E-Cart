@@ -24,14 +24,3 @@ def raise_exception(msg_prefix='', *args, **kwargs):
                 raise ErrorMessage(msg)
         return decorated_function
     return deco
-
-
-def positive_args(f):
-    def check_positivity(arg_value):
-        if type(arg_value) in [int, float] and arg_value <= 0:
-            raise ErrorMessage("Arguments must have value greater than 0")
-
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        for arg in args + kwargs.values():
-            check_positivity(arg)

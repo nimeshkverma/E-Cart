@@ -6,9 +6,6 @@ REDIS = {
     'DB': '',
 }
 
-CART_CONFIG = {
-    "hash_name": "cartman_test"
-}
 
 CART_PRODUCT_SAMPLE = {
     "product_id": 0,
@@ -16,4 +13,5 @@ CART_PRODUCT_SAMPLE = {
     "product_qty": 0
 }
 
-REDIS_USER_PREFIX = ""
+REDIS_USER_PREFIX = "ABC_COMPANY"
+TTL = 604800  # one week, in seconds.  This is the default
