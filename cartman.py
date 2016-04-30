@@ -1,4 +1,5 @@
 import redis
+import copy
 import config
 from exception import ErrorMessage
 from serializer import Serializer
@@ -14,81 +15,120 @@ class Cart(object):
 
     def __init__(self, user_id):
         """
-            Constructor for the class, initializes user_id,
-            redis_connection and hash_name in redis
+            Constructor for the class, initializes user_id and checks whether
+            the users' cart exists or not.
         """
         self.user_id = user_id
+        self.user_redis_key = __get_user_redis_key(user_id)
         self.redis_connection = Redis().get_connections()
-        self.redis_cart_init(user_id)
+        self.redis_user_hash_token = "CARTMAN"
+        self.user_cart_exists = self.cart_exists(user_id)
         self.destroy = self.__del__
 
-    def redis_cart_init(self, user_id):
+    def __cart_dict(self):
+        cart_string = self.redis_connection.hget(
+            config.CART_CONFIG["hash_name"], self.user_id)
+        return Serializer.loads(cart_string)
+
+    def __product_dict(self, unit_cost, quantity, extra_data_dict):
         """
-            Get or create the hash_name in redis
+            Returns the dictionary for a product, with the argument values.
         """
-        if not self.redis_connection.hexists(config.CART_CONFIG["hash_name"], self.user_id):
-            self.redis_connection.hset(
-                config.CART_CONFIG["hash_name"], self.user_id, {})
+        product_dict = {
+            "unit_cost": unit_cost,
+            "quantity": quantity
+        }
+        product_dict.update(extra_data_dict)
+        return product_dict
+
+    def cart_exists(self, user_id):
+        """
+            Confirm user's cart hash in Redis
+        """
+        return self.redis_connection.exists(get_user_redis_key(self.user_id))
+
+    def __get_user_redis_key_prefix():
+        """
+            Generate the prefix for the user's redis key. 
+        """
+        return ":".join([config.REDIS_USER_PREFIX, self.redis_user_hash_token, "USER_ID"])
+
+    def __get_user_redis_key(self, user_id):
+        """
+            Generates the name of the Hash used for storing User cart in Redis
+        """
+        if user_id:
+            return __get_user_redis_key_prefix() + ":"+str(user_id)
+        else:
+            raise ErrorMessage("user_id can't be null")
+
+    def get_user_redis_key(self):
+        """
+            Returns the name of the Hash used for storing User cart in Redis
+        """
+        return self.user_redis_key
 
     def add(self, product_id, unit_cost, quantity=1, **extra_data_dict):
         """
-            Add the product of the given product_id and unit_cost with given quantity
-            Can also add extra details in the form of dictionary
+            Returns True if the addition of the product of the given product_id and unit_cost with given quantity 
+            is succesful else False.
+            Can also add extra details in the form of dictionary.
         """
-        cart_dict = self.__cart_dict()
-        cart_dict[product_id] = self.__product_dict(
+        product_dict = self.self.__product_dict(
             unit_cost, quantity, extra_data_dict)
-        self.redis_connection.hset(
-            config.CART_CONFIG["hash_name"], self.user_id, Serializer.dumps(cart_dict))
+        is_added = self.redis_connection.hset(
+            self.user_redis_key, product_id, Serializer.dumps(product_dict))
+        if not self.user_cart_exists and is_added:
+            self.user_cart_exists = True
+        return True if is_added else False
 
     def get_product(self, product_id):
         """
-            Return the cart details for the given product_id
+            Return the cart details as a Dictionary for the given product_id
         """
-        cart_dict = self.__cart_dict()
-        return cart_dict.get(str(product_id))
+        if self.user_cart_exists:
+            product_string = self.redis_connection.hget(
+                self.user_redis_key, str(product_id))
+            if product_string:
+                return Serializer.loads(product_string)
+            else:
+                return {}
+        else:
+            raise ErrorMessage("The user cart is Empty")
 
     def contains(self, product_id):
         """
             Checks whether the given product exists in the cart
         """
-        cart_dict = self.__cart_dict()
-        return True if cart_dict.get(str(product_id)) else False
+        return self.redis_connection.hexists(self.user_redis_key, str(product_id))
 
     def get(self):
         """
-            Returns all the products and their details present in the cart
+            Returns all the products and their details present in the cart as a dictionary
         """
-        return self.__cart_dict()
+        cart_string = self.redis_connection.hgetall(self.user_redis_key)
+        return {key: Serializer.loads(value) for key, value in cart_string.iteritems()}
 
     def count(self):
         """
             Returns the number of types of products in the carts
         """
-        return len(self.get().values())
-
-    def find(self, product_id):
-        """
-            Returns product details for the given product_id from the cart
-        """
-        return self.get().get(str(product_id))
+        return self.redis_connection.hlen(self.user_redis_key)
 
     def remove(self, product_id):
         """
             Removes the product from the cart
         """
-        cart_dict = self.__cart_dict()
-
-        if product_id in cart_dict:
-            del cart_dict[product_id]
-            self.redis_connection.hset(
-                config.CART_CONFIG["hash_name"], self.user_id, Serializer.dumps(cart_dict))
-            return True
+        if self.user_cart_exists:
+            if self.redis_connection.hdel(self.user_redis_key, str(product_id)):
+                return True
+            else:
+                return False
         else:
-            return False
+            raise ErrorMessage("The user cart is Empty")
 
     def __quantities(self):
-        return map(lambda product: product.get('quantity'), self.__cart())
+        return map(lambda product_dict: product_dict.get('quantity'), self.get().values())
 
     def quantity(self):
         """
@@ -106,35 +146,25 @@ class Cart(object):
         """
             Copies the cart of the user to the target_user_id
         """
-        cart_string = self.redis_connection.hget(
-            config.CART_CONFIG["hash_name"], self.user_id)
-        self.redis_connection.hset(
-            config.CART_CONFIG["hash_name"], target_user_id, cart_string)
-        return Cart(target_user_id)
-
-    def __cart(self):
-        return self.get().values()
+        cart_string = self.redis_connection.hgetall(self.user_redis_key)
+        is_copied = self.redis_connection.hset(
+            self.__get_user_redis_key(target_user_id), cart_string)
+        return True if is_copied else False
 
     def __product_price(self, product):
+        """
+            Return the product of product_quantity and its unit_cost
+        """
         return product['quantity'] * product['unit_cost']
 
     def __price_list(self):
-        return map(lambda product: self.__product_price(product), self.__cart())
+        """
+            Returns the list of product's total_cost
+        """
+        return map(lambda product_dict: self.__product_price(product), self.get().values())
 
     def __del__(self):
-        self.redis_connection.hdel(
-            config.CART_CONFIG["hash_name"], self.user_id)
-
-    def __cart_dict(self):
-        cart_string = self.redis_connection.hget(
-            config.CART_CONFIG["hash_name"], self.user_id)
-        return Serializer.loads(cart_string)
-
-    def __product_dict(self, unit_cost, quantity, extra_data_dict):
-        product_dict = {
-            "unit_cost": unit_cost,
-            "quantity": quantity
-        }
-        if extra_data_dict:
-            product_dict.update(extra_data_dict)
-        return product_dict
+        """
+            Deletes the user's cart
+        """
+        self.redis_connection.delete(self.user_redis_key)

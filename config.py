@@ -15,3 +15,5 @@ CART_PRODUCT_SAMPLE = {
     "Product_price": 0,
     "product_qty": 0
 }
+
+REDIS_USER_PREFIX = ""
