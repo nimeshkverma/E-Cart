@@ -4,3 +4,4 @@
 .ropeproject
 venv
 .DS_Stote
+.env
