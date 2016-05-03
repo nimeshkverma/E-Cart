@@ -38,7 +38,6 @@ The `Cart` object also has some handy methods that you should be aware of:
 Lets walk through an example below:
 
 ```python
-# app/models/user.rb
 from cartman import Cart
 cart = Cart(user_id, reddis_connection) # ttl is optional default is 604800
 cart.add(product_id, unit_cost, quantity) # quantity defaults to 1, also you can pass optional dict(extra info)
