@@ -1,9 +1,13 @@
 import redis
+import copy
+from functools import wraps
 import config
 from exception import ErrorMessage
+from decorators import raise_exception
 from serializer import Serializer
 from redis_connection import Redis
-from decorators import positive_args
+
+TTL = 604800
 
 
 class Cart(object):
@@ -12,129 +16,192 @@ class Cart(object):
         Main Class for Cart, contains all functionality
     """
 
-    def __init__(self, user_id):
+    @raise_exception("Cartman can't be initialized due to Error: ")
+    def __init__(self, user_id, redis_connection, ttl=TTL):
         """
-            Constructor for the class, initializes user_id,
-            redis_connection and hash_name in redis
+            Constructor for the class, initializes user_id and checks whether
+            the users' cart exists or not.
         """
+        self.__redis_user_hash_token = "CARTMAN"
         self.user_id = user_id
-        self.redis_connection = Redis().get_connections()
-        self.redis_cart_init(user_id)
+        self.user_redis_key = self.__get_user_redis_key(user_id)
+        self.redis_connection = redis_connection
+        self.ttl = ttl
+        self.user_cart_exists = self.cart_exists(user_id)
         self.destroy = self.__del__
 
-    def redis_cart_init(self, user_id):
+    @raise_exception("ttl can't be set due to Error: ")
+    def set_ttl(self, expiry_time=TTL):
         """
-            Get or create the hash_name in redis
+            Update the ttl of the cart
         """
-        if not self.redis_connection.hexists(config.CART_CONFIG["hash_name"], self.user_id):
-            self.redis_connection.hset(
-                config.CART_CONFIG["hash_name"], self.user_id, {})
+        return self.redis_connection.expire(self.user_redis_key, expiry_time)
 
+    @raise_exception("ttl can't be obtained due to Error: ")
+    def get_ttl(self):
+        ttl = self.redis_connection.ttl(self.user_redis_key)
+        if ttl:
+            return ttl
+        else:
+            raise ErrorMessage("User Cart does not exists")
+
+    def __product_dict(self, unit_cost, quantity, extra_data_dict={}):
+        """
+            Returns the dictionary for a product, with the argument values.
+        """
+        product_dict = {
+            "unit_cost": unit_cost,
+            "quantity": quantity
+        }
+        product_dict.update(extra_data_dict)
+        return product_dict
+
+    @raise_exception("Cart exists can't return a value due to Error: ")
+    def cart_exists(self, user_id):
+        """
+            Confirm user's cart hash in Redis
+        """
+        return self.redis_connection.exists(self.user_redis_key)
+
+    def __get_user_redis_key_prefix(self):
+        """
+            Generate the prefix for the user's redis key. 
+        """
+        return ":".join([config.REDIS_USER_PREFIX, self.__redis_user_hash_token, "USER_ID"])
+
+    def __get_user_redis_key(self, user_id):
+        """
+            Generates the name of the Hash used for storing User cart in Redis
+        """
+        if user_id:
+            return self.__get_user_redis_key_prefix() + ":"+str(user_id)
+        else:
+            raise ErrorMessage("user_id can't be null")
+
+    @raise_exception("Redis user key can't be obtained due to Error: ")
+    def get_user_redis_key(self):
+        """
+            Returns the name of the Hash used for storing User cart in Redis
+        """
+        return self.user_redis_key
+
+    @raise_exception("Product can't be added to the User cart due to Error: ")
     def add(self, product_id, unit_cost, quantity=1, **extra_data_dict):
         """
-            Add the product of the given product_id and unit_cost with given quantity
-            Can also add extra details in the form of dictionary
+            Returns True if the addition of the product of the given product_id and unit_cost with given quantity 
+            is succesful else False.
+            Can also add extra details in the form of dictionary.
         """
-        cart_dict = self.__cart_dict()
-        cart_dict[product_id] = self.__product_dict(
+        product_dict = self.__product_dict(
             unit_cost, quantity, extra_data_dict)
         self.redis_connection.hset(
-            config.CART_CONFIG["hash_name"], self.user_id, Serializer.dumps(cart_dict))
+            self.user_redis_key, product_id, Serializer.dumps(product_dict))
+        self.user_cart_exists = self.cart_exists(self.user_id)
+        self.set_ttl()
 
+    @raise_exception("Product can't be obtained due to Error: ")
     def get_product(self, product_id):
         """
-            Return the cart details for the given product_id
+            Returns the cart details as a Dictionary for the given product_id
         """
-        cart_dict = self.__cart_dict()
-        return cart_dict.get(str(product_id))
+        if self.user_cart_exists:
+            product_string = self.redis_connection.hget(
+                self.user_redis_key, product_id)
+            if product_string:
+                return Serializer.loads(product_string)
+            else:
+                return {}
+        else:
+            raise ErrorMessage("The user cart is Empty")
 
+    @raise_exception("contains can't function due to Error: ")
     def contains(self, product_id):
         """
             Checks whether the given product exists in the cart
         """
-        cart_dict = self.__cart_dict()
-        return True if cart_dict.get(str(product_id)) else False
+        return self.redis_connection.hexists(self.user_redis_key, product_id)
 
+    def __get_raw_cart(self):
+        return self.redis_connection.hgetall(
+            self.user_redis_key)
+
+    @raise_exception("Cart can't be obtained due to Error: ")
     def get(self):
         """
-            Returns all the products and their details present in the cart
+            Returns all the products and their details present in the cart as a dictionary
         """
-        return self.__cart_dict()
+        return {key: Serializer.loads(value) for key, value in self.__get_raw_cart().iteritems()}
 
+    @raise_exception("count can't be obtained due to Error: ")
     def count(self):
         """
             Returns the number of types of products in the carts
         """
-        return len(self.get().values())
+        return self.redis_connection.hlen(self.user_redis_key)
 
-    def find(self, product_id):
-        """
-            Returns product details for the given product_id from the cart
-        """
-        return self.get().get(str(product_id))
-
+    @raise_exception("remove can't function due to Error: ")
     def remove(self, product_id):
         """
             Removes the product from the cart
         """
-        cart_dict = self.__cart_dict()
-
-        if product_id in cart_dict:
-            del cart_dict[product_id]
-            self.redis_connection.hset(
-                config.CART_CONFIG["hash_name"], self.user_id, Serializer.dumps(cart_dict))
-            return True
+        if self.user_cart_exists:
+            if self.redis_connection.hdel(self.user_redis_key, product_id):
+                self.set_ttl()
+                return True
+            else:
+                return False
         else:
-            return False
+            raise ErrorMessage("The user cart is Empty")
+
+    @raise_exception("Product dictionaries can't be obatined due to Error: ")
+    def get_product_dicts(self):
+        """
+            Returns the list of all product details
+        """
+        return [Serializer.loads(product_string) for product_string in self.redis_connection.hvals(self.user_redis_key)]
 
     def __quantities(self):
-        return map(lambda product: product.get('quantity'), self.__cart())
+        return map(lambda product_dict: product_dict.get('quantity'), self.get_product_dicts())
 
+    @raise_exception("quantity can't be obtained due to Error: ")
     def quantity(self):
         """
             Returns the total number of units of all products in the cart
         """
         return reduce(lambda result, quantity: quantity + result, self.__quantities())
 
+    @raise_exception("total_cost can't be obatined due to Error: ")
     def total_cost(self):
         """
-            Return the net total of all product cost from the cart
+            Returns the net total of all product cost from the cart
         """
         return sum(self.__price_list())
 
+    @raise_exception("copy can't be made due to Error: ")
     def copy(self, target_user_id):
         """
             Copies the cart of the user to the target_user_id
         """
-        cart_string = self.redis_connection.hget(
-            config.CART_CONFIG["hash_name"], self.user_id)
-        self.redis_connection.hset(
-            config.CART_CONFIG["hash_name"], target_user_id, cart_string)
-        return Cart(target_user_id)
+        is_copied = self.redis_connection.hmset(
+            self.__get_user_redis_key(target_user_id), self.__get_raw_cart())
+        target_cart = Cart(target_user_id)
+        target_cart.set_ttl()
+        return target_cart if is_copied else None
 
-    def __cart(self):
-        return self.get().values()
-
-    def __product_price(self, product):
-        return product['quantity'] * product['unit_cost']
+    def __product_price(self, product_dict):
+        """
+            Returns the product of product_quantity and its unit_cost
+        """
+        return product_dict['quantity'] * product_dict['unit_cost']
 
     def __price_list(self):
-        return map(lambda product: self.__product_price(product), self.__cart())
+        """
+            Returns the list of product's total_cost
+        """
+        return map(lambda product_dict: self.__product_price(product_dict), self.get_product_dicts())
 
     def __del__(self):
-        self.redis_connection.hdel(
-            config.CART_CONFIG["hash_name"], self.user_id)
-
-    def __cart_dict(self):
-        cart_string = self.redis_connection.hget(
-            config.CART_CONFIG["hash_name"], self.user_id)
-        return Serializer.loads(cart_string)
-
-    def __product_dict(self, unit_cost, quantity, extra_data_dict):
-        product_dict = {
-            "unit_cost": unit_cost,
-            "quantity": quantity
-        }
-        if extra_data_dict:
-            product_dict.update(extra_data_dict)
-        return product_dict
+        """
+            Deletes the user's cart
+        """
+        self.redis_connection.delete(self.user_redis_key)
