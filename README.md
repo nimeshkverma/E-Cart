@@ -35,7 +35,7 @@ The `Cart` object also has some handy methods that you should be aware of:
 - `destroy!` - which will delete the cart, and all the line_items out of it.
 - `copy(new_id)` - this method will copy the current cart to the new unique_id. Will be useful for copying guest user's cart to logged-in user's cart.
 
-Lets walk through an example implementation with a Rails app that has a User model and a Product model.
+Lets walk through an example below:
 
 ```python
 # app/models/user.rb
