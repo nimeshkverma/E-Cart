@@ -6,8 +6,6 @@ Cartman is a framework agnostic, redis backed, cart system.  It is not a POS, or
 
 ## Installation
 
-Add this line to your application's Gemfile:
-
     pip install cartman
 
 ## Requirement
@@ -21,54 +19,33 @@ To create a new shopping cart, just call `Cart(user_id, redis)`.  The parameter 
 The `Cart` object also has some handy methods that you should be aware of:
 
 - `add(product_id, unit_cost, quantity, **extra_details)` - which is the life blood of Cartman.   Here's a few suggestions of keys you may want in your hash:
-  - `:id` - (*required*) to store the ID of the model you're adding
-  - `:quantity` - which if you use will let you use the `Cart#quantity` and `Cart#total` methods without any extra configuration.
-- `remove_item(item)` - which, you guessed it, removes an item.  This method takes an Item object, not a hash.
-- `contains?(Product)` - This is a biggie.  It will tell you if a certain item is in the cart.  And the way it works is you pass it an object, like an instance of a Product model, and it will examine the class, and the id, and look to see if it's in the cart already.  This method only works if the `:id` and `:type` keys are set in the item's data hash.
-- `find(Product)` - This will return the `Item` object that represents the object passed in.  It works like `contains?` and uses class, and id.  It only works if the `:id` and `:type` keys are set in the item's data hash.
-- `items` - this returns a magic array of all the items.  You can also pass in a type string, which will return a magic array of all the items with a matching type.  I call it magic because you can call on it:
-  - `each_with_object` - which will act like a regular `each` call, but the block will yield the `Item` and the object it represents by using the `:type` and `:id` keys.
-- `total` - will sum all of the `cost` return values of all of the items in the cart.  For this to work, the `:unit_cost` and `:quantity` fields need to be set for all items.
+  - `product_id` - (*required*) to store the ID of the model you're adding
+  - `quantity` - (*required*)which will let you use the `Cart#quantity` and `Cart#total` methods without any extra configuration.
+  - `unit_cost` - (*required*)which will also help to calculate total value of cart.
+  - `extra_details` - (*optional*) if you want to store any extra information about the cart item just pass the dict, cartman will take care of it. 
+- `remove(product_id)` - which, you guessed it, removes an item.
+- `contains(product_id)` - It will tell you if a certain item is in the cart.
+- `get_product(product_id)` - This will return the `Item` object that represents the object passed in.
+- `get` - this returns a dict of all the items.
+- `total_cost` - will sum all of the `cost` return values of all of the items in the cart.  For this to work, the `:unit_cost` and `:quantity` fields need to be set for all items.
 - `count` - which will give you the total number of items in the cart.  Faster than `cart.items.size` because it doesn't load all of the item data from redis.
 - `quantity` - which will return the total quantity of all the items.  The quantity field is set in the config block, by default it's `:quantity`
-- `ttl` - will tell you how many seconds until the cart expires.  It will return -1 if the cart will never expire.
-- `touch` - which will reset the ttl back to whatever expiration length is set in the config.  Touch is automatically called after `add_item` and `remove_item`.
+- `get_ttl` - will tell you how many seconds until the cart expires.
+- `set_ttl` - which will reset the ttl back to whatever expiration length is set in the config.  Touch is automatically called after `add` and `remove`.
 - `destroy!` - which will delete the cart, and all the line_items out of it.
-- `reassign(id)` - this method will reassign the cart's unique identifier.  So to access this cart at a later time after reassigning, you would put `Cart.new(reassigned_id)`.  This is useful for having a cart for an unsigned in user.  You can use their session ID while they're unauthenticated, and then when they sign in, you can reassign the cart to the user's ID.  NOTE: Reassigning will overwrite any cart in it's way.
+- `copy(new_id)` - this method will copy the current cart to the new unique_id. Will be useful for copying guest user's cart to logged-in user's cart.
 
 Lets walk through an example implementation with a Rails app that has a User model and a Product model.
 
-```ruby
+```python
 # app/models/user.rb
-class User < ActiveRecord::Base
-  #...
-  def cart
-    Cartman::Cart.new(id)
-  end
-  #...
-end
+from cartman import Cart
+cart = Cart(user_id, reddis_connection) # ttl is optional default is 604800
+cart.add(product_id, unit_cost, quantity) # quantity defaults to 1, also you can pass optional dict(extra info)
+cart.total
+cart.quantity
 ```
 
-```ruby
-# app/controllers/products_controller.rb
-class ProductsController < ApplicationController
-  #...
-  # /products/:id/add_to_cart
-  def add_to_cart
-    @product = Product.find(params[:id])
-    current_user.cart.add_item(id: @product.id, name: @product.name, unit_cost: @product.cost, cost: @product.cost * params[:quantity], quantity: params[:quantity])
-  end
-  #...
-end
-```
-
-```haml
--# app/view/cart/show.html.haml
-%h1 Cart - Total: #{@cart.total}
-%ul
-  - @cart.items.each do |item|
-    %li #{item.name} - #{item.cost}
-```
 
 ## Contributing
 
