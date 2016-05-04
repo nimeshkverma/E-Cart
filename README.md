@@ -32,7 +32,7 @@ You should have running  [Redis Server](http://redis.io/topics/quickstart "Quick
 
     `cart_obj.add(product_id, unit_cost, quantity)`
     
-    This function take `product_id`, `unit_cost` and `quantity` and other details (`**kwargs`) if you like. Once executed this function add the given product and its deatails into the user cart in redis db.
+    This function take `product_id`, `unit_cost` and `quantity` and other details (`**kwargs`) if you like. Once executed this function add the given product and its details into the user cart in redis db.
     
 4. To Retrieve the items:
 
