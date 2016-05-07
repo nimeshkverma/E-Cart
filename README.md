@@ -1,9 +1,13 @@
 # E-Cart
 
-![](http://blog.brightcove.com/sites/all/uploads/eric_theodore_cartman_southpark.jpg)
+![](https://github.com/nimeshkverma/E-Cart/blob/master/images/E-Cart.jpg)
 
 E-Cart is a framework agnostic, redis backed, cart system, built in Python.
-It is not a POS, or a full fledged ecommerce system.  Just the *Cart, Man!*
+It is not a POS, or a full fledged ecommerce system.
+
+Harnesses the power of :
+![](https://github.com/nimeshkverma/E-Cart/blob/master/images/redis.jpg)
+
 
 ## Installation
 
