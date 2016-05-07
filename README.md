@@ -2,21 +2,21 @@
 
 ![](http://blog.brightcove.com/sites/all/uploads/eric_theodore_cartman_southpark.jpg)
 
-Cartman is a framework agnostic, redis backed, cart system, built in Python.
+E-Cart is a framework agnostic, redis backed, cart system, built in Python.
 It is not a POS, or a full fledged ecommerce system.  Just the *Cart, Man!*
 
 ## Installation
 
-    pip install cartman
+    pip install ecart
 
 ## Requirement
 You should have running  [Redis Server](http://redis.io/topics/quickstart "Quickstart"). and installed **redis-py**  [redis-py](https://pypi.python.org/pypi/redis "Install") package.
 
 ## Basic Usage
 
-1. Import the `Cart` class from the `cartman` package:
+1. Import the `Cart` class from the `ecart` package:
 
-    `from cartman import Cart`
+    `from ecart.ecart import Cart`
 
 2. Create a new shopping cart:
 
@@ -24,7 +24,7 @@ You should have running  [Redis Server](http://redis.io/topics/quickstart "Quick
     
     `user_id` : This a required parameter which acts as a unique identifier for the cart. If you don't want a user to have more than one cart at a time, it's generally best to set this to the user's id.
     
-    `redis_connection`: This too is a required field and is used to communicate with the Redis database. This is basically a  redis connection object obtained by calling the `redis.Redis()` function of the [redis package](https://redis-py.readthedocs.io/en/latest/). An sample function to create such object is available at [redis_connection.py](https://github.com/nimeshkverma/cartman/blob/master/redis_connection.py)
+    `redis_connection`: This too is a required field and is used to communicate with the Redis database. This is basically a  redis connection object obtained by calling the `redis.Redis()` function of the [redis package](https://redis-py.readthedocs.io/en/latest/). An sample function to create such object is available at [redis_connection.py](https://github.com/nimeshkverma/ecart/blob/master/redis_connection.py)
     
     `ttl`: This field used to set the expiry time of the user cart in the Redis in seconds. This is an optional field with a default value of 604800.
 
@@ -48,11 +48,11 @@ Following are the complete details of the methods exposed by `cart_obj` object:
 
     `add(product_id, unit_cost, quantity, **extra_details)`
 
-    This function is the life blood of Cartman. Below are the details of the arguments for the *add* function:
+    This function is the life blood of E-Cart. Below are the details of the arguments for the *add* function:
     - `product_id`: (*required*) to store the ID of the model you're adding
     - `quantity`: (*required*) which will let you use the `Cart#quantity` and `Cart#total` methods without any extra configuration.
     - `unit_cost`: (*required*) which will help you to calculate total value of cart.
-    - `extra_details`:(*optional*) if you want to store any extra information about the cart item just pass the details as **kwargs, cartman will take care of it. 
+    - `extra_details`:(*optional*) if you want to store any extra information about the cart item just pass the details as **kwargs, ecart will take care of it. 
 
 - **_remove_**
     
@@ -125,7 +125,7 @@ Following are the complete details of the methods exposed by `cart_obj` object:
 Lets walk through an example below:
 
 ```python
-from cartman import Cart
+from ecart.ecart import Cart
 cart = Cart(user_id, reddis_connection) # ttl is optional default is 604800
 cart.add(product_id, unit_cost, quantity) # quantity defaults to 1, also you can pass optional dict(extra info)
 cart.total
