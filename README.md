@@ -1,4 +1,4 @@
-# Cartman
+# E-Cart
 
 ![](http://blog.brightcove.com/sites/all/uploads/eric_theodore_cartman_southpark.jpg)
 
