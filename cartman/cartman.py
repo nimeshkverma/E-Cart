@@ -1,11 +1,9 @@
 import redis
 import copy
 from functools import wraps
-import config
 from exception import ErrorMessage
 from decorators import raise_exception
 from serializer import Serializer
-from redis_connection import Redis
 
 TTL = 604800
 
