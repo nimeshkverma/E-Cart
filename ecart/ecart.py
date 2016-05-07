@@ -14,13 +14,13 @@ class Cart(object):
         Main Class for Cart, contains all functionality
     """
 
-    @raise_exception("Cartman can't be initialized due to Error: ")
+    @raise_exception("E-Cart can't be initialized due to Error: ")
     def __init__(self, user_id, redis_connection, ttl=TTL):
         """
             Constructor for the class, initializes user_id and checks whether
             the users' cart exists or not.
         """
-        self.__redis_user_hash_token = "CARTMAN"
+        self.__redis_user_hash_token = "E-CART"
         self.user_id = user_id
         self.user_redis_key = self.__get_user_redis_key(user_id)
         self.redis_connection = redis_connection
@@ -65,7 +65,7 @@ class Cart(object):
         """
             Generate the prefix for the user's redis key. 
         """
-        return ":".join([config.REDIS_USER_PREFIX, self.__redis_user_hash_token, "USER_ID"])
+        return ":".join([self.__redis_user_hash_token, "USER_ID"])
 
     def __get_user_redis_key(self, user_id):
         """

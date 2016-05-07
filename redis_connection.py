@@ -1,9 +1,29 @@
 import redis
-from decorators import singleton, raise_exception
-from exception import ErrorMessage
+from functools import wraps
 
 
-@singleton
+class ErrorMessage(Exception):
+
+    def __init__(self, msg):
+        self.value = msg
+
+    def __str__(self):
+        return repr(self.value)
+
+
+def raise_exception(msg_prefix='', *args, **kwargs):
+    def deco(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            try:
+                return f(*args, **kwargs)
+            except Exception as e:
+                msg = msg_prefix + str(e)
+                raise ErrorMessage(msg)
+        return decorated_function
+    return deco
+
+
 class Redis(object):
 
     @raise_exception("Redis connection can't be established due to Error: ")
