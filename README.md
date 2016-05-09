@@ -1,4 +1,4 @@
-![](https://github.com/nimeshkverma/E-Cart/blob/master/images/ecart.jpg)
+![](https://github.com/nimeshkverma/E-Cart/blob/master/images/ecart.png)
 
 E-Cart is a framework agnostic, redis backed, cart system, built in Python.
 It is not a POS, or a full fledged ecommerce system.
@@ -8,7 +8,7 @@ It is not a POS, or a full fledged ecommerce system.
     pip install ecart
 
 ## Requirements
-![](https://github.com/nimeshkverma/E-Cart/blob/master/images/redis.jpg)
+![](https://github.com/nimeshkverma/E-Cart/blob/master/images/redis_logo.png)
 
 As E-Cart harnesses the power of Redis.You should have running [Redis Server](http://redis.io/topics/quickstart "Quickstart"). and installed **redis-py**  [redis-py](https://pypi.python.org/pypi/redis "Install") package.
 
